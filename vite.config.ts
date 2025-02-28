@@ -9,7 +9,10 @@ export default defineConfig(({ isSsrBuild }) => ({
   plugins: [reactRouter(), tailwindcss(), tsconfigPaths()],
   build: {
     rollupOptions: isSsrBuild
-      ? { input: "./workers/react-router-entry.ts" }
+      ? {
+        input: "./workers/app.ts",
+        external: ["cloudflare:workers"],
+      }
       : undefined,
   },
   ssr: {

@@ -1,8 +1,9 @@
+// workers/react-router-entry.ts
 import { createRequestHandler } from "react-router";
-import { getLoadContext } from "load-context";
+import { getLoadContext } from "../load-context";
 
+// Important: Keep virtual:react-router/server-build import here
 const requestHandler = createRequestHandler(
-  // @ts-expect-error - React Router build step
   () => import("virtual:react-router/server-build"),
   import.meta.env.MODE
 );
