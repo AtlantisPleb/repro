@@ -15,6 +15,7 @@
   "dependencies": {
     "@react-router/node": "^7.2.0",
     "@react-router/serve": "^7.2.0",
+    "agents-sdk": "^0.0.22",
     "drizzle-orm": "~0.36.3",
     "isbot": "^5.1.17",
     "react": "^19.0.0",
