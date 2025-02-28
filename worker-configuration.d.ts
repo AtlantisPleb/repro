@@ -2,6 +2,6 @@
 
 interface Env {
 	VALUE_FROM_CLOUDFLARE: "Hello from Cloudflare";
-	Stateful: DurableObjectNamespace /* Stateful */;
+	Stateful: DurableObjectNamespace<import("./build/server/index").Stateful>;
 	DB: D1Database;
 }

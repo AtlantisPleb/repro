@@ -12,12 +12,28 @@ export { Stateful };
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    const upgradeHeader = request.headers.get("Upgrade");
-
-    // Provide Durable Object namespace explicitly to agent SDK
-    const agentResponse = await routeAgentRequest(request, {
-      Stateful: env.Stateful,  // explicitly pass Durable Object namespace
+    console.log("[fetch] Request URL:", request.url);
+    console.log("[fetch] Durable Object binding:", env.Stateful ? "✅ Exists" : "❌ Missing");
+    console.log("[fetch] Env details:", {
+      DB: !!env.DB,
+      Stateful: env.Stateful,
+      VALUE_FROM_CLOUDFLARE: env.VALUE_FROM_CLOUDFLARE,
     });
+
+    if (!env.Stateful) {
+      return new Response("Durable Object Binding (Stateful) is missing", { status: 500 });
+    }
+
+    let agentResponse;
+    try {
+      agentResponse = await routeAgentRequest(request, {
+        Stateful: env.Stateful, // Explicitly passing
+      });
+      console.log("[routeAgentRequest] Agent response exists:", !!agentResponse);
+    } catch (error) {
+      console.error("[routeAgentRequest] error:", error);
+      return new Response(`Agent error: ${error.message}`, { status: 500 });
+    }
 
     if (agentResponse) {
       return agentResponse;
@@ -28,6 +44,13 @@ export default {
       context: { cloudflare: { env, ctx } },
     });
 
-    return requestHandler(request, loadContext);
+    console.log("[fetch] Load context initialized");
+
+    try {
+      return requestHandler(request, loadContext);
+    } catch (error) {
+      console.error("[requestHandler] error:", error);
+      return new Response(`Handler error: ${error.message}`, { status: 500 });
+    }
   },
 };
