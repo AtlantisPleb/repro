@@ -1,91 +1,175 @@
-# Welcome to React Router!
+# React Router v7 + Cloudflare Workers & Durable Objects Integration
 
-A modern, production-ready template for building full-stack React applications using React Router.
+This guide describes how to set up a Cloudflare Workers application using React Router v7 and integrate it with Cloudflare Durable Objects using the `agents-sdk`.
 
-## Features
+## Overview
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+This project template provides:
 
-## Getting Started
+- **React Router v7** for routing and SSR.
+- **Cloudflare Workers** for serverless deployment.
+- **Cloudflare Durable Objects** for persistent, serverless state management.
+- **Drizzle ORM** with D1 database for database interactions.
+- **Tailwind CSS** for styling.
+- TypeScript configured throughout the stack.
+
+## Project Structure
+
+```sh
+├── app
+│   ├── agents
+│   │   └── stateful.ts # Durable Object class
+│   ├── routes
+│   │   └── home.tsx
+│   ├── root.tsx
+│   └── entry.server.tsx
+├── workers
+│   ├── app.ts
+│   └── react-router-entry.ts
+├── drizzle.config.ts
+├── wrangler.toml
+├── vite.config.ts
+├── tsconfig.json
+```
+
+## Key Modifications to Base Template
+
+### Durable Objects Setup
+
+1. **Define a Durable Object Class** (`app/agents/stateful.ts`):
+
+```typescript
+import { Agent } from "agents-sdk";
+
+export class Stateful extends Agent<Env> {
+  initialState = {
+    counter: 0,
+    text: "",
+    color: "#3B82F6",
+    hello: this.env.VALUE_FROM_CLOUDFLARE,
+  };
+}
+```
+
+2. **Export Durable Object from Worker Entry** (`workers/app.ts`):
+
+```typescript
+import worker from "./react-router-entry";
+import { Stateful } from "../app/agents/stateful";
+
+export { Stateful };
+export default worker;
+```
+
+3. **Durable Object Binding in Wrangler** (`wrangler.toml`):
+
+```toml
+[[durable_objects.bindings]]
+name = "Stateful"
+class_name = "Stateful"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Stateful"]
+```
+
+### Route Durable Object Requests
+
+Modify the React Router entry handler (`workers/react-router-entry.ts`) to route requests to Durable Objects:
+
+```typescript
+const agentResponse = await routeAgentRequest(request, {
+  Stateful: env.Stateful,
+});
+
+if (agentResponse) return agentResponse;
+
+const loadContext = getLoadContext({
+  request,
+  context: { cloudflare: { env, ctx } },
+});
+
+return requestHandler(request, loadContext);
+```
+
+## Environment Setup
 
 ### Installation
 
-Install the dependencies:
+Install dependencies:
 
-```bash
+```sh
 npm install
 ```
 
-### Development
+### Database
 
-Run an initial database migration:
+Set up Cloudflare D1 and Drizzle ORM:
 
-```bash
+```sh
+npx wrangler d1 create repro-db
+# Update drizzle.config.ts with DB details
 npm run db:migrate
 ```
 
-Start the development server with HMR:
+## Development
 
-```bash
+Run locally:
+
+```sh
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+Access the app at `http://localhost:5173`.
 
-## Building for Production
+## Build & Deploy
 
 Create a production build:
 
-```bash
+```sh
 npm run build
 ```
 
-## Deployment
-
-Deployment is done using the Wrangler CLI.
-
-First, you need to create a d1 database in Cloudflare.
-
-```sh
-npx wrangler d1 create <name-of-your-database>
-```
-
-Be sure to update the `wrangler.toml` file with the correct database name and id.
-
-You will also need to [update the `drizzle.config.ts` file](https://orm.drizzle.team/docs/guides/d1-http-with-drizzle-kit), and then run the production migration:
-
-```sh
-npm run db:migrate-production
-```
-
-To build and deploy directly to production:
+Deploy with Wrangler:
 
 ```sh
 npm run deploy
 ```
 
-To deploy a preview URL:
+## Troubleshooting Durable Objects
 
-```sh
-npx wrangler versions upload
+If you encounter errors like:
+
+- `Cannot read properties of undefined (reading 'idFromName')`
+- `Does not match any server namespace`
+
+Ensure:
+
+- Durable Object names are **lowercase** in routes (`stateful` not `Stateful`).
+- Durable Object classes use explicit relative imports without aliases.
+- Bindings in `wrangler.toml` exactly match class exports.
+
+Example:
+
+```typescript
+useAgent({ agent: "stateful" }); // correct
 ```
 
-You can then promote a version to production after verification or roll it out progressively.
+## Observability & Logging
 
-```sh
-npx wrangler versions deploy
+Logs are enabled via Wrangler (`wrangler.toml`):
+
+```toml
+[observability.logs]
+enabled = true
 ```
 
-## Styling
+Enhanced logging in request handlers helps debug Durable Object bindings:
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+```typescript
+console.log("[fetch] Durable Object binding:", env.Stateful ? "✅ Exists" : "❌ Missing");
+```
 
----
+## Conclusion
 
-Built with ❤️ using React Router.
+This setup provides a solid foundation for production-ready React applications leveraging server-side rendering, persistent state, and Cloudflare's global infrastructure.
