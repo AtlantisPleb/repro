@@ -20,4 +20,7 @@ class_name = "Stateful"
 
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["Stateful"]
+new_classes = ["Stateful"]
+
+[observability.logs]
+enabled = true
