@@ -26,7 +26,7 @@ export default function Home({ actionData, loaderData }: Route.ComponentProps) {
   });
 
   const agent = useAgent<SyncedState>({
-    agent: "Stateful",
+    agent: "stateful",
     onStateUpdate: (state) => {
       setSyncedState(state);
     },
